@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Picsart Instant Avatar Generator</title>
+<title>Instant Avatar Generator</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
@@ -397,13 +397,13 @@
 <body>
 
 <div class="container">
-  <h1>Picsart Instant Avatar</h1>
+  <h1>Instant Avatar</h1>
   <p class="subtitle">AIアバタージェネレーター</p>
 
   <!-- API Key Screen -->
   <div id="apikey-screen" class="active">
     <div class="card">
-      <label for="apikey-input">Picsart API Key を入力してください</label>
+      <label for="apikey-input">API Key を入力してください</label>
       <input type="password" id="apikey-input" placeholder="X-Picsart-API-Key を入力..." />
       <div style="margin-top:14px;">
         <button class="btn btn-primary" id="save-apikey-btn">保存して始める</button>
@@ -421,7 +421,7 @@
     <div class="card">
       <label>写真を選択</label>
       <div class="file-area" id="file-area">
-        <input type="file" id="file-input" accept="image/jpeg,image/png" capture="environment" />
+        <input type="file" id="file-input" accept="image/jpeg,image/png" />
         <div class="icon">📷</div>
         <div class="text">タップして写真を選択 または 撮影</div>
       </div>
