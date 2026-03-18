@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Picsart Instant Avatar Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top, 12px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    padding-left: max(12px, env(safe-area-inset-left, 12px));
+    padding-right: max(12px, env(safe-area-inset-right, 12px));
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+  }
+  .container {
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.4em;
+    margin-bottom: 4px;
+    background: linear-gradient(90deg, #e94560, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 16px;
+  }
+
+  /* API Key Screen */
+  #apikey-screen, #main-screen, #result-screen {
+    display: none;
+  }
+  #apikey-screen.active, #main-screen.active, #result-screen.active {
+    display: block;
+  }
+  .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  label {
+    display: block;
+    font-size: 0.85em;
+    margin-bottom: 6px;
+    color: #ccc;
+    font-weight: 600;
+  }
+  input[type="text"], input[type="password"], textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    outline: none;
+    transition: border 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+    border-color: #e94560;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+    line-height: 1.5;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    min-height: 48px;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: #fff;
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: #e0e0e0;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn-secondary:active {
+    background: rgba(255,255,255,0.18);
+  }
+  .btn-small {
+    padding: 10px 16px;
+    font-size: 0.85em;
+    width: auto;
+    min-height: 40px;
+  }
+  .btn-download {
+    background: linear-gradient(135deg, #4caf50, #388e3c);
+    color: #fff;
+    margin-top: 8px;
+    font-size: 0.9em;
+    padding: 12px 20px;
+    min-height: 44px;
+  }
+  .btn-download:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+
+  /* File input area */
+  .file-area {
+    border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .file-area:active {
+    border-color: #e94560;
+    background: rgba(233,69,96,0.05);
+  }
+  .file-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    font-size: 0;
+  }
+  .file-area .icon {
+    font-size: 2.2em;
+    margin-bottom: 6px;
+  }
+  .file-area .text {
+    font-size: 0.85em;
+    color: #aaa;
+  }
+  .file-area.has-file {
+    border-color: #4caf50;
+    background: rgba(76,175,80,0.05);
+  }
+  .file-name {
+    font-size: 0.75em;
+    color: #888;
+    text-align: center;
+    margin-top: 4px;
+    word-break: break-all;
+  }
+
+  /* Preview */
+  .preview-container {
+    text-align: center;
+    margin-top: 10px;
+  }
+  .preview-container img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* Prompt section */
+  .prompt-section {
+    margin-top: 4px;
+  }
+  .prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .prompt-display {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.8em;
+    color: #aaa;
+    line-height: 1.5;
+    max-height: 70px;
+    overflow: hidden;
+    position: relative;
+  }
+  .prompt-display::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.4));
+  }
+  .prompt-edit-area {
+    display: none;
+  }
+  .prompt-edit-area.active {
+    display: block;
+  }
+
+  /* Negative prompt */
+  .negative-prompt-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8em;
+    color: #888;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-bottom: 6px;
+    padding: 6px 0;
+    touch-action: manipulation;
+  }
+  .negative-prompt-toggle:active { color: #ccc; }
+  .negative-prompt-area { display: none; }
+  .negative-prompt-area.active { display: block; }
+
+  /* Progress */
+  .progress-container {
+    text-align: center;
+    padding: 30px 16px;
+  }
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(255,255,255,0.1);
+    border-top-color: #e94560;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-text {
+    font-size: 0.9em;
+    color: #ccc;
+  }
+  .progress-sub {
+    font-size: 0.75em;
+    color: #888;
+    margin-top: 6px;
+  }
+
+  /* Result */
+  .result-images {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .result-image-wrapper {
+    width: 100%;
+    text-align: center;
+  }
+  .result-images img {
+    max-width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .result-images img:active {
+    transform: scale(0.98);
+  }
+
+  /* Error */
+  .error-msg {
+    background: rgba(244,67,54,0.15);
+    border: 1px solid rgba(244,67,54,0.3);
+    color: #ff6b6b;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.85em;
+    margin-top: 10px;
+    display: none;
+  }
+  .error-msg.active { display: block; }
+
+  /* Settings row */
+  .settings-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+  }
+  .settings-row button {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.78em;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 8px 4px;
+    min-height: 36px;
+    touch-action: manipulation;
+  }
+  .settings-row button:active { color: #e94560; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 1000;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top, 16px));
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+  .lightbox.active { display: flex; }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 75vh;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+  .lightbox-close {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top, 12px));
+    right: max(12px, env(safe-area-inset-right, 12px));
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.3em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    touch-action: manipulation;
+  }
+  .lightbox-close:active { background: rgba(255,255,255,0.3); }
+  .lightbox-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .lightbox-actions .btn {
+    width: auto;
+    padding: 10px 20px;
+    font-size: 0.85em;
+    min-height: 44px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Picsart Instant Avatar</h1>
+  <p class="subtitle">AIアバタージェネレーター</p>
+
+  <!-- API Key Screen -->
+  <div id="apikey-screen" class="active">
+    <div class="card">
+      <label for="apikey-input">Picsart API Key を入力してください</label>
+      <input type="password" id="apikey-input" placeholder="X-Picsart-API-Key を入力..." />
+      <div style="margin-top:14px;">
+        <button class="btn btn-primary" id="save-apikey-btn">保存して始める</button>
+      </div>
+      <div class="error-msg" id="apikey-error"></div>
+    </div>
+  </div>
+
+  <!-- Main Screen -->
+  <div id="main-screen">
+    <div class="settings-row">
+      <button id="change-apikey-btn">API Key を変更</button>
+    </div>
+
+    <div class="card">
+      <label>写真を選択</label>
+      <div class="file-area" id="file-area">
+        <input type="file" id="file-input" accept="image/jpeg,image/png" capture="environment" />
+        <div class="icon">📷</div>
+        <div class="text">タップして写真を選択 または 撮影</div>
+      </div>
+      <div class="file-name" id="file-name" style="display:none;"></div>
+      <div class="preview-container" id="preview-container" style="display:none;">
+        <img id="preview-img" alt="プレビュー" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="prompt-section">
+        <div class="prompt-header">
+          <label style="margin-bottom:0;">プロンプト</label>
+          <button class="btn btn-secondary btn-small" id="edit-prompt-btn">編集</button>
+        </div>
+        <div class="prompt-display" id="prompt-display"></div>
+        <div class="prompt-edit-area" id="prompt-edit-area">
+          <textarea id="prompt-textarea" rows="6"></textarea>
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-small" id="save-prompt-btn">保存</button>
+            <button class="btn btn-secondary btn-small" id="cancel-prompt-btn">キャンセル</button>
+            <button class="btn btn-secondary btn-small" id="reset-prompt-btn" style="margin-left:auto;">デフォルトに戻す</button>
+          </div>
+        </div>
+
+        <div class="negative-prompt-toggle" id="neg-prompt-toggle">▶ ネガティブプロンプト（オプション）</div>
+        <div class="negative-prompt-area" id="neg-prompt-area">
+          <textarea id="neg-prompt-textarea" rows="4" placeholder="生成したくないもの..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="generate-btn" disabled>アバターを生成する</button>
+    <div class="error-msg" id="main-error"></div>
+
+    <!-- Progress -->
+    <div class="card" id="progress-card" style="display:none;">
+      <div class="progress-container">
+        <div class="spinner"></div>
+        <div class="progress-text" id="progress-text">アバターを生成中...</div>
+        <div class="progress-sub" id="progress-sub">しばらくお待ちください</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Screen -->
+  <div id="result-screen">
+    <div class="card">
+      <label style="text-align:center; font-size:1.05em; margin-bottom:14px;">生成結果</label>
+      <div class="result-images" id="result-images"></div>
+    </div>
+    <button class="btn btn-primary" id="retry-btn">もう一度試す</button>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightbox-close">✕</button>
+    <img id="lightbox-img" alt="拡大画像" />
+    <div class="lightbox-actions">
+      <button class="btn btn-download" id="lightbox-download">💾 ダウンロード</button>
+      <button class="btn btn-secondary" id="lightbox-close-btn" style="width:auto;padding:10px 20px;font-size:0.85em;min-height:44px;">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_PROMPT = `Using the provided human photo as a strict reference, create a highly appealing and expressive pixel art character that closely resembles the person, faithfully matching facial features, hairstyle, clothing, colors, and any visible personal items or accessories. Convert the person into a polished 16-bit style pixel art character with clean outlines, precise pixel shading, balanced chibi-inspired proportions, and a charming, likable expression while maintaining strong likeness. Place the pixel art character integrated into the original image, positioned naturally in the bottom-right corner, slightly smaller than the real person, without overlapping the face. Keep the original photo intact, add no text, no blur, no realism, pure authentic pixel art for the character only.`;
+
+const DEFAULT_NEGATIVE_PROMPT = `extra fingers, extra arms, extra hands, ugly, tiling, poorly drawn hands, poorly drawn face, poorly drawn feet, out of frame, extra limbs, extra leg, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, text, grainy, signature, cut off, draft, cutoff head, ugly teeth, ugly mouth, mutant face, mutant hand, mutant arm, nudity, NSFW, gun, weapon, drone, bikini, naked, (lowres, low quality, worst quality:1.2), (text:1.2), watermark, (frame:1.2), deformed, ugly, deformed eyes, cartoony, cartoon, green, blue, colors, colorful, vivid, sepia, noir, open chest, open bust, open torso`;
+
+const API_BASE = 'https://genai-avatars-api.picsart.io/v1/avatars/instant';
+const UPLOAD_API = 'https://api.picsart.io/tools/1.0/upload';
+
+// State
+let apiKey = localStorage.getItem('picsart_api_key') || '';
+let currentPrompt = localStorage.getItem('picsart_prompt') || DEFAULT_PROMPT;
+let currentNegPrompt = localStorage.getItem('picsart_neg_prompt') || DEFAULT_NEGATIVE_PROMPT;
+let selectedFile = null;
+let isGenerating = false;
+let currentLightboxUrl = '';
+
+// Elements
+const apikeyScreen = document.getElementById('apikey-screen');
+const mainScreen = document.getElementById('main-screen');
+const resultScreen = document.getElementById('result-screen');
+const apikeyInput = document.getElementById('apikey-input');
+const saveApikeyBtn = document.getElementById('save-apikey-btn');
+const apikeyError = document.getElementById('apikey-error');
+const changeApikeyBtn = document.getElementById('change-apikey-btn');
+const fileInput = document.getElementById('file-input');
+const fileArea = document.getElementById('file-area');
+const fileName = document.getElementById('file-name');
+const previewContainer = document.getElementById('preview-container');
+const previewImg = document.getElementById('preview-img');
+const promptDisplay = document.getElementById('prompt-display');
+const promptEditArea = document.getElementById('prompt-edit-area');
+const promptTextarea = document.getElementById('prompt-textarea');
+const editPromptBtn = document.getElementById('edit-prompt-btn');
+const savePromptBtn = document.getElementById('save-prompt-btn');
+const cancelPromptBtn = document.getElementById('cancel-prompt-btn');
+const resetPromptBtn = document.getElementById('reset-prompt-btn');
+const negPromptToggle = document.getElementById('neg-prompt-toggle');
+const negPromptArea = document.getElementById('neg-prompt-area');
+const negPromptTextarea = document.getElementById('neg-prompt-textarea');
+const generateBtn = document.getElementById('generate-btn');
+const mainError = document.getElementById('main-error');
+const progressCard = document.getElementById('progress-card');
+const progressText = document.getElementById('progress-text');
+const progressSub = document.getElementById('progress-sub');
+const resultImages = document.getElementById('result-images');
+const retryBtn = document.getElementById('retry-btn');
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxClose = document.getElementById('lightbox-close');
+const lightboxCloseBtn = document.getElementById('lightbox-close-btn');
+const lightboxDownload = document.getElementById('lightbox-download');
+
+// Initialize
+function init() {
+  if (apiKey) {
+    showScreen('main');
+  } else {
+    showScreen('apikey');
+  }
+  promptDisplay.textContent = currentPrompt;
+  promptTextarea.value = currentPrompt;
+  negPromptTextarea.value = currentNegPrompt;
+}
+
+function showScreen(name) {
+  apikeyScreen.classList.remove('active');
+  mainScreen.classList.remove('active');
+  resultScreen.classList.remove('active');
+  if (name === 'apikey') apikeyScreen.classList.add('active');
+  if (name === 'main') mainScreen.classList.add('active');
+  if (name === 'result') resultScreen.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showError(el, msg) {
+  el.textContent = msg;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 8000);
+}
+
+// API Key
+saveApikeyBtn.addEventListener('click', () => {
+  const key = apikeyInput.value.trim();
+  if (!key) {
+    showError(apikeyError, 'API Key を入力してください。');
+    return;
+  }
+  apiKey = key;
+  localStorage.setItem('picsart_api_key', apiKey);
+  showScreen('main');
+});
+
+apikeyInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveApikeyBtn.click();
+});
+
+changeApikeyBtn.addEventListener('click', () => {
+  apikeyInput.value = apiKey;
+  showScreen('apikey');
+});
+
+// File selection
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.match(/^image\/(jpeg|png)$/)) {
+    showError(mainError, 'JPG または PNG 画像を選択してください。');
+    fileInput.value = '';
+    return;
+  }
+  selectedFile = file;
+  fileArea.classList.add('has-file');
+  fileName.textContent = file.name;
+  fileName.style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    previewImg.src = ev.target.result;
+    previewContainer.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  updateGenerateBtn();
+});
+
+function updateGenerateBtn() {
+  generateBtn.disabled = !selectedFile || isGenerating;
+}
+
+// Prompt editing
+editPromptBtn.addEventListener('click', () => {
+  promptTextarea.value = currentPrompt;
+  promptDisplay.style.display = 'none';
+  editPromptBtn.style.display = 'none';
+  promptEditArea.classList.add('active');
+});
+
+savePromptBtn.addEventListener('click', () => {
+  currentPrompt = promptTextarea.value.trim() || DEFAULT_PROMPT;
+  localStorage.setItem('picsart_prompt', currentPrompt);
+  promptDisplay.textContent = currentPrompt;
+  promptDisplay.style.display = 'block';
+  editPromptBtn.style.display = '';
+  promptEditArea.classList.remove('active');
+});
+
+cancelPromptBtn.addEventListener('click', () => {
+  promptDisplay.style.display = 'block';
+  editPromptBtn.style.display = '';
+  promptEditArea.classList.remove('active');
+});
+
+resetPromptBtn.addEventListener('click', () => {
+  promptTextarea.value = DEFAULT_PROMPT;
+});
+
+// Negative prompt toggle
+negPromptToggle.addEventListener('click', () => {
+  const isOpen = negPromptArea.classList.contains('active');
+  negPromptArea.classList.toggle('active');
+  negPromptToggle.textContent = isOpen
+    ? '▶ ネガティブプロンプト（オプション）'
+    : '▼ ネガティブプロンプト（オプション）';
+});
+
+negPromptTextarea.addEventListener('change', () => {
+  currentNegPrompt = negPromptTextarea.value;
+  localStorage.setItem('picsart_neg_prompt', currentNegPrompt);
+});
+
+// Upload image to get URL
+async function uploadImage(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const res = await fetch(UPLOAD_API, {
+    method: 'POST',
+    headers: {
+      'X-Picsart-API-Key': apiKey,
+      'Accept': 'application/json'
+    },
+    body: formData
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`画像アップロードエラー (${res.status}): ${errBody}`);
+  }
+
+  const data = await res.json();
+  if (data.data && data.data.url) {
+    return data.data.url;
+  }
+  throw new Error('画像URLの取得に失敗しました: ' + JSON.stringify(data));
+}
+
+// Create avatar
+async function createAvatar(imageUrl) {
+  const body = {
+    images: [imageUrl],
+    prompt: currentPrompt,
+    count: 1
+  };
+  const negPrompt = negPromptTextarea.value.trim();
+  if (negPrompt) {
+    body.negative_prompt = negPrompt;
+  }
+
+  const res = await fetch(API_BASE, {
+    method: 'POST',
+    headers: {
+      'X-Picsart-API-Key': apiKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`アバター作成エラー (${res.status}): ${errBody}`);
+  }
+
+  return await res.json();
+}
+
+// Poll for result
+async function getResult(inferenceId) {
+  const url = `${API_BASE}/${inferenceId}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'X-Picsart-API-Key': apiKey,
+      'Accept': 'application/json'
+    }
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`結果取得エラー (${res.status}): ${errBody}`);
+  }
+
+  return await res.json();
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// Download helper
+async function downloadImage(url, filename) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || 'avatar.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    // Fallback: open in new tab
+    window.open(url, '_blank');
+  }
+}
+
+// Generate flow
+generateBtn.addEventListener('click', async () => {
+  if (!selectedFile || isGenerating) return;
+  isGenerating = true;
+  updateGenerateBtn();
+  mainError.classList.remove('active');
+  progressCard.style.display = 'block';
+  progressText.textContent = '画像をアップロード中...';
+  progressSub.textContent = '';
+
+  try {
+    // Step 1: Upload image
+    const imageUrl = await uploadImage(selectedFile);
+    progressText.textContent = 'アバターを生成リクエスト中...';
+
+    // Step 2: Create avatar
+    const createRes = await createAvatar(imageUrl);
+    if (createRes.status === 'error') {
+      throw new Error('APIエラー: ' + JSON.stringify(createRes));
+    }
+    const inferenceId = createRes.inference_id;
+    if (!inferenceId) {
+      throw new Error('inference_id が取得できませんでした: ' + JSON.stringify(createRes));
+    }
+
+    progressText.textContent = 'アバターを生成中...';
+    progressSub.textContent = '初回チェックまで約20秒...';
+
+    // Step 3: Poll for result
+    await sleep(20000); // First check after 20s
+
+    let attempts = 0;
+    const maxAttempts = 60; // Max ~10 minutes
+    while (attempts < maxAttempts) {
+      attempts++;
+      progressSub.textContent = `チェック中... (${attempts}回目)`;
+
+      const result = await getResult(inferenceId);
+      const status = result.status;
+
+      if (status === 'DONE') {
+        // Success!
+        const urls = result.data && result.data.urls ? result.data.urls : [];
+        if (urls.length === 0) {
+          throw new Error('生成画像のURLが見つかりませんでした。');
+        }
+        showResult(urls);
+        return;
+      } else if (status === 'FAILED') {
+        throw new Error('アバター生成に失敗しました。別の写真でお試しください。');
+      } else if (status === 'IMAGE_NOT_VALID') {
+        throw new Error('画像が無効です。顔が写っている写真をお使いください。');
+      }
+
+      // ACCEPTED or IN_PROGRESS - keep waiting
+      progressText.textContent = `アバターを生成中... (ステータス: ${status})`;
+      await sleep(10000); // Check every 10s
+    }
+
+    throw new Error('タイムアウト: 生成に時間がかかりすぎています。後で再度お試しください。');
+
+  } catch (err) {
+    console.error(err);
+    showError(mainError, err.message);
+    progressCard.style.display = 'none';
+  } finally {
+    isGenerating = false;
+    updateGenerateBtn();
+  }
+});
+
+// Show result
+function showResult(urls) {
+  progressCard.style.display = 'none';
+  resultImages.innerHTML = '';
+  urls.forEach((url, idx) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'result-image-wrapper';
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '生成されたアバター';
+    img.loading = 'lazy';
+    img.addEventListener('click', () => {
+      currentLightboxUrl = url;
+      lightboxImg.src = url;
+      lightbox.classList.add('active');
+    });
+    wrapper.appendChild(img);
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'btn btn-download';
+    dlBtn.textContent = '💾 画像を保存';
+    dlBtn.addEventListener('click', () => {
+      downloadImage(url, `avatar_${idx + 1}.png`);
+    });
+    wrapper.appendChild(dlBtn);
+
+    resultImages.appendChild(wrapper);
+  });
+  showScreen('result');
+}
+
+// Lightbox
+lightboxClose.addEventListener('click', (e) => {
+  e.stopPropagation();
+  lightbox.classList.remove('active');
+});
+
+lightboxCloseBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  lightbox.classList.remove('active');
+});
+
+lightboxDownload.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (currentLightboxUrl) {
+    downloadImage(currentLightboxUrl, 'avatar.png');
+  }
+});
+
+lightbox.addEventListener('click', (e) => {
+  if (e.target === lightbox) {
+    lightbox.classList.remove('active');
+  }
+});
+
+// Retry
+retryBtn.addEventListener('click', () => {
+  selectedFile = null;
+  fileInput.value = '';
+  fileArea.classList.remove('has-file');
+  fileName.style.display = 'none';
+  previewContainer.style.display = 'none';
+  progressCard.style.display = 'none';
+  mainError.classList.remove('active');
+  updateGenerateBtn();
+  showScreen('main');
+});
+
+// Start
+init();
+</script>
+</body>
+</html>
