@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Picsart Instant Avatar Generator</title>
+<title>Instant Avatar Generator</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
@@ -397,13 +397,13 @@
 <body>
 
 <div class="container">
-  <h1>Picsart Instant Avatar</h1>
+  <h1>Instant Avatar</h1>
   <p class="subtitle">AIアバタージェネレーター</p>
 
   <!-- API Key Screen -->
   <div id="apikey-screen" class="active">
     <div class="card">
-      <label for="apikey-input">Picsart API Key を入力してください</label>
+      <label for="apikey-input">API Key を入力してください</label>
       <input type="password" id="apikey-input" placeholder="X-Picsart-API-Key を入力..." />
       <div style="margin-top:14px;">
         <button class="btn btn-primary" id="save-apikey-btn">保存して始める</button>
@@ -421,7 +421,7 @@
     <div class="card">
       <label>写真を選択</label>
       <div class="file-area" id="file-area">
-        <input type="file" id="file-input" accept="image/jpeg,image/png" capture="environment" />
+        <input type="file" id="file-input" accept="image/jpeg,image/png" />
         <div class="icon">📷</div>
         <div class="text">タップして写真を選択 または 撮影</div>
       </div>
@@ -660,6 +660,7 @@ async function uploadImage(file) {
   const formData = new FormData();
   formData.append('image', file);
 
+  console.log('[Upload] Uploading image:', file.name, file.size, 'bytes');
   const res = await fetch(UPLOAD_API, {
     method: 'POST',
     headers: {
@@ -671,10 +672,12 @@ async function uploadImage(file) {
 
   if (!res.ok) {
     const errBody = await res.text();
+    console.error('[Upload] Error:', res.status, errBody);
     throw new Error(`画像アップロードエラー (${res.status}): ${errBody}`);
   }
 
   const data = await res.json();
+  console.log('[Upload] Response:', JSON.stringify(data, null, 2));
   if (data.data && data.data.url) {
     return data.data.url;
   }
@@ -693,6 +696,7 @@ async function createAvatar(imageUrl) {
     body.negative_prompt = negPrompt;
   }
 
+  console.log('[CreateAvatar] Request body:', JSON.stringify(body, null, 2));
   const res = await fetch(API_BASE, {
     method: 'POST',
     headers: {
@@ -705,15 +709,19 @@ async function createAvatar(imageUrl) {
 
   if (!res.ok) {
     const errBody = await res.text();
+    console.error('[CreateAvatar] Error:', res.status, errBody);
     throw new Error(`アバター作成エラー (${res.status}): ${errBody}`);
   }
 
-  return await res.json();
+  const data = await res.json();
+  console.log('[CreateAvatar] Response:', JSON.stringify(data, null, 2));
+  return data;
 }
 
 // Poll for result
 async function getResult(inferenceId) {
   const url = `${API_BASE}/${inferenceId}`;
+  console.log('[GetResult] Polling:', url);
   const res = await fetch(url, {
     method: 'GET',
     headers: {
@@ -724,10 +732,13 @@ async function getResult(inferenceId) {
 
   if (!res.ok) {
     const errBody = await res.text();
+    console.error('[GetResult] Error:', res.status, errBody);
     throw new Error(`結果取得エラー (${res.status}): ${errBody}`);
   }
 
-  return await res.json();
+  const data = await res.json();
+  console.log('[GetResult] Response:', JSON.stringify(data, null, 2));
+  return data;
 }
 
 function sleep(ms) {
@@ -793,15 +804,32 @@ generateBtn.addEventListener('click', async () => {
       const result = await getResult(inferenceId);
       const status = result.status;
 
-      if (status === 'DONE') {
-        // Success!
-        const urls = result.data && result.data.urls ? result.data.urls : [];
+      if (status === 'DONE' || status === 'success') {
+        // Success! Try multiple response formats
+        let urls = [];
+        if (result.data) {
+          if (Array.isArray(result.data.urls)) {
+            urls = result.data.urls;
+          } else if (Array.isArray(result.data)) {
+            urls = result.data.map(item => item.url).filter(Boolean);
+          } else if (result.data.url) {
+            urls = [result.data.url];
+          }
+        }
+        if (urls.length === 0 && Array.isArray(result.urls)) {
+          urls = result.urls;
+        }
+        if (urls.length === 0 && Array.isArray(result.output)) {
+          urls = result.output.map(item => typeof item === 'string' ? item : item.url).filter(Boolean);
+        }
+        console.log('[GetResult] Extracted URLs:', urls);
         if (urls.length === 0) {
-          throw new Error('生成画像のURLが見つかりませんでした。');
+          console.warn('[GetResult] Could not extract URLs from response:', JSON.stringify(result, null, 2));
+          throw new Error('生成画像のURLが見つかりませんでした。コンソールでレスポンスを確認してください。');
         }
         showResult(urls);
         return;
-      } else if (status === 'FAILED') {
+      } else if (status === 'FAILED' || status === 'failed' || status === 'error') {
         throw new Error('アバター生成に失敗しました。別の写真でお試しください。');
       } else if (status === 'IMAGE_NOT_VALID') {
         throw new Error('画像が無効です。顔が写っている写真をお使いください。');
