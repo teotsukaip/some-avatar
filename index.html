@@ -206,6 +206,29 @@
     border: 1px solid rgba(255,255,255,0.1);
   }
 
+  /* Model selector */
+  .model-select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.3);
+    color: #e0e0e0;
+    font-size: 0.85em;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    min-height: 48px;
+    touch-action: manipulation;
+  }
+  .model-select:focus {
+    outline: none;
+    border-color: #e94560;
+  }
+
   /* Prompt section */
   .prompt-section {
     margin-top: 4px;
@@ -432,6 +455,11 @@
     </div>
 
     <div class="card">
+      <label for="model-select">AIモデル</label>
+      <select class="model-select" id="model-select"></select>
+    </div>
+
+    <div class="card">
       <div class="prompt-section">
         <div class="prompt-header">
           <label style="margin-bottom:0;">プロンプト</label>
@@ -490,6 +518,19 @@
 <script>
 const DEFAULT_PROMPT = `Using the provided human photo as a strict reference, create a highly appealing and expressive pixel art character that closely resembles the person, faithfully matching facial features, hairstyle, clothing, colors, and any visible personal items or accessories. Convert the person into a polished 16-bit style pixel art character with clean outlines, precise pixel shading, balanced chibi-inspired proportions, and a charming, likable expression while maintaining strong likeness. Place the pixel art character integrated into the original image, positioned naturally in the bottom-right corner, slightly smaller than the real person, without overlapping the face. Keep the original photo intact, add no text, no blur, no realism, pure authentic pixel art for the character only.`;
 
+const AI_MODELS = [
+  { value: 'urn:air:google:model:google:gemini-2.5-flash-image@1', label: 'Google Gemini 2.5 Flash Image' },
+  { value: 'urn:air:google:model:google:gemini-3-pro-image-preview@1', label: 'Google Gemini 3 Pro Image Preview' },
+  { value: 'urn:air:fluxai:model:fluxai:flux-2-pro@1', label: 'Flux AI 2 Pro' },
+  { value: 'urn:air:fluxai:model:fluxai:flux-2-max@1', label: 'Flux AI 2 Max' },
+  { value: 'urn:air:fluxai:model:fluxai:flux-2-flex@1', label: 'Flux AI 2 Flex' },
+  { value: 'urn:air:ideogram:model:ideogram:ideogram@3', label: 'Ideogram 3' },
+  { value: 'urn:air:picsart:model:picsart:aiavatar@v3.6.17', label: 'Picsart AI Avatar v3.6.17' },
+  { value: 'urn:air:picsart:model:picsart:aiavatar@v3.6.16', label: 'Picsart AI Avatar v3.6.16' },
+  { value: 'urn:air:picsart:model:picsart:aiavatar@v3.6.11', label: 'Picsart AI Avatar v3.6.11' },
+];
+const DEFAULT_MODEL = 'urn:air:google:model:google:gemini-2.5-flash-image@1';
+
 const DEFAULT_NEGATIVE_PROMPT = `extra fingers, extra arms, extra hands, ugly, tiling, poorly drawn hands, poorly drawn face, poorly drawn feet, out of frame, extra limbs, extra leg, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, text, grainy, signature, cut off, draft, cutoff head, ugly teeth, ugly mouth, mutant face, mutant hand, mutant arm, nudity, NSFW, gun, weapon, drone, bikini, naked, (lowres, low quality, worst quality:1.2), (text:1.2), watermark, (frame:1.2), deformed, ugly, deformed eyes, cartoony, cartoon, green, blue, colors, colorful, vivid, sepia, noir, open chest, open bust, open torso`;
 
 const API_BASE = 'https://genai-avatars-api.picsart.io/v1/avatars/instant';
@@ -499,6 +540,7 @@ const UPLOAD_API = 'https://api.picsart.io/tools/1.0/upload';
 let apiKey = localStorage.getItem('picsart_api_key') || '';
 let currentPrompt = localStorage.getItem('picsart_prompt') || DEFAULT_PROMPT;
 let currentNegPrompt = localStorage.getItem('picsart_neg_prompt') || DEFAULT_NEGATIVE_PROMPT;
+let currentModel = localStorage.getItem('picsart_model') || DEFAULT_MODEL;
 let selectedFile = null;
 let isGenerating = false;
 let currentLightboxUrl = '';
@@ -523,6 +565,7 @@ const editPromptBtn = document.getElementById('edit-prompt-btn');
 const savePromptBtn = document.getElementById('save-prompt-btn');
 const cancelPromptBtn = document.getElementById('cancel-prompt-btn');
 const resetPromptBtn = document.getElementById('reset-prompt-btn');
+const modelSelect = document.getElementById('model-select');
 const negPromptToggle = document.getElementById('neg-prompt-toggle');
 const negPromptArea = document.getElementById('neg-prompt-area');
 const negPromptTextarea = document.getElementById('neg-prompt-textarea');
@@ -546,6 +589,14 @@ function init() {
   } else {
     showScreen('apikey');
   }
+  // Populate model selector
+  AI_MODELS.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = m.label;
+    modelSelect.appendChild(opt);
+  });
+  modelSelect.value = currentModel;
   promptDisplay.textContent = currentPrompt;
   promptTextarea.value = currentPrompt;
   negPromptTextarea.value = currentNegPrompt;
@@ -655,6 +706,12 @@ negPromptTextarea.addEventListener('change', () => {
   localStorage.setItem('picsart_neg_prompt', currentNegPrompt);
 });
 
+// Model selection
+modelSelect.addEventListener('change', () => {
+  currentModel = modelSelect.value;
+  localStorage.setItem('picsart_model', currentModel);
+});
+
 // Upload image to get URL
 async function uploadImage(file) {
   const formData = new FormData();
@@ -687,6 +744,7 @@ async function uploadImage(file) {
 // Create avatar
 async function createAvatar(imageUrl) {
   const body = {
+    model: currentModel,
     images: [imageUrl],
     prompt: currentPrompt,
     count: 1
