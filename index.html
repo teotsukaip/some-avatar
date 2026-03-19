@@ -643,8 +643,8 @@ changeApikeyBtn.addEventListener('click', () => {
 fileInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  if (!file.type.match(/^image\/(jpeg|png)$/)) {
-    showError(mainError, 'JPG または PNG 画像を選択してください。');
+  if (!file.type.match(/^image\/(jpeg|png|heic|heif)$/)) {
+    showError(mainError, 'JPG、PNG、または HEIC 画像を選択してください。');
     fileInput.value = '';
     return;
   }
