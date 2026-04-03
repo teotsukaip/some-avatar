@@ -124,13 +124,42 @@ def extract_result(response_text, valid_ids):
             if candidate in valid_ids:
                 return candidate
 
-    # Fallback: search for any valid ID as a whole word in the response
-    # Use word-boundary regex to avoid false matches (e.g. "AT" in "THAT")
-    # Check from the end of the response (more likely to be the conclusion)
+    # Fallback: look for IDs in structured contexts only to avoid matching
+    # common English words like "at", "it", "et".
+    # Only IDs that are NOT common English words get simple word-boundary
+    # matching; ambiguous IDs (AT, IT, ET) require surrounding context.
+    common_words = {"AT", "IT", "ET"}
+    safe_ids = sorted(vid for vid in valid_ids if vid not in common_words)
+    ambiguous_ids = sorted(vid for vid in valid_ids if vid in common_words)
+
     for line in reversed(response_text.strip().splitlines()):
-        for vid in sorted(valid_ids):
-            if re.search(r'\b' + re.escape(vid) + r'\b', line.upper()):
+        line_stripped = line.strip()
+
+        # For safe IDs (BT, CT, DT, FT, GT, HT) — simple word-boundary match
+        for vid in safe_ids:
+            if re.search(r'\b' + re.escape(vid) + r'\b', line_stripped, re.IGNORECASE):
                 return vid
+
+        # For ambiguous IDs (AT, IT, ET) — require context keywords nearby
+        for vid in ambiguous_ids:
+            esc = re.escape(vid)
+            patterns = [
+                # After keywords: "golfer AT", "answer AT", "match: AT", etc.
+                r'(?:golfer|ID|match|result|answer|closest|resembles|similar'
+                r'|image)\s*[:=]?\s*\(?' + esc + r'\)?\s*[.,;!:)\]"\'"]?\s*$',
+                r'(?:golfer|ID|match|result|answer|closest|resembles|similar'
+                r'|image)\s*[:=]?\s*\(?' + esc + r'\)?\s*[.,;!:)\]"\']',
+                # "is AT" at end of line or before punctuation
+                r'\bis\s+' + esc + r'\s*[.,;!:)\]"\']',
+                r'\bis\s+' + esc + r'\s*$',
+                # "AT is the most/best" / "AT is most closely"
+                r'(?:^|[\s,;:])\s*' + esc + r'\s+is\s+(?:the\s+)?(?:most|best|closest)\b',
+                # ID alone on a line or after colon/equals
+                r'(?:^|[,:=])\s*' + esc + r'\s*[.!]?\s*$',
+            ]
+            for pattern in patterns:
+                if re.search(pattern, line_stripped, re.IGNORECASE):
+                    return vid
 
     return None
 
