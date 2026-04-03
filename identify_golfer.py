@@ -10,7 +10,7 @@ Usage:
 
 Requires:
     - Reference images in the same directory:
-      AT.jpg, BT.jpg, CT.jpg, DT.jpg, ET.jpg, FT.jpg, GT.jpg, HT.jpg, IT.png
+      AT.jpg, BT.jpg, CT.jpg, DT.jpg, ET.jpg, FT.jpg, GT.jpg, HT.jpg
     - Target image: 111111.jpg
     - Ollama server running at http://localhost:11435 with llava:latest model
 """
@@ -35,7 +35,6 @@ REFERENCE_IMAGES = [
     "FT.jpg",
     "GT.jpg",
     "HT.jpg",
-    "IT.png",
 ]
 
 TARGET_IMAGE = "111111.jpg"
