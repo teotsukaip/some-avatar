@@ -18,6 +18,7 @@ Requires:
 import base64
 import json
 import os
+import re
 import sys
 import urllib.request
 import urllib.error
@@ -123,11 +124,12 @@ def extract_result(response_text, valid_ids):
             if candidate in valid_ids:
                 return candidate
 
-    # Fallback: search for any valid ID mentioned in the response
+    # Fallback: search for any valid ID as a whole word in the response
+    # Use word-boundary regex to avoid false matches (e.g. "AT" in "THAT")
     # Check from the end of the response (more likely to be the conclusion)
     for line in reversed(response_text.strip().splitlines()):
-        for vid in valid_ids:
-            if vid in line.upper():
+        for vid in sorted(valid_ids):
+            if re.search(r'\b' + re.escape(vid) + r'\b', line.upper()):
                 return vid
 
     return None
@@ -181,7 +183,7 @@ def main():
     print("======================\n")
 
     # Extract the identified golfer ID
-    valid_ids = set(reference_ids)
+    valid_ids = list(reference_ids)
     golfer_id = extract_result(response_text, valid_ids)
 
     if golfer_id:
